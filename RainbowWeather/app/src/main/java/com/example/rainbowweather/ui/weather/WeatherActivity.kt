@@ -1,5 +1,6 @@
 package com.example.rainbowweather.ui.weather
 
+import android.content.Context
 import android.graphics.Color
 import android.icu.text.SimpleDateFormat
 import android.os.Build
@@ -9,15 +10,14 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowInsetsController
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.RelativeLayout
-import android.widget.ScrollView
-import android.widget.TextView
-import android.widget.Toast
+import android.view.inputmethod.InputMethodManager
+import android.widget.*
 import androidx.annotation.RequiresApi
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rainbowweather.R
 import com.example.rainbowweather.databinding.*
 import com.example.rainbowweather.logic.model.Weather
@@ -33,12 +33,13 @@ class WeatherActivity : AppCompatActivity() {
     var forecastLayout: LinearLayout ?= null
     var coldRiskText: TextView ?= null
     var placeName: TextView ?= null
-
     var dressingText: TextView ?= null
     var ultravioletText: TextView ?= null
     var carWashingText: TextView ?= null
     var weatherLayout: ScrollView ? = null
-
+    var swipeRefresh: SwipeRefreshLayout ?= null
+    var navBtn: Button ?= null
+    var drawerLayout: DrawerLayout ?= null
 
     @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,7 +48,7 @@ class WeatherActivity : AppCompatActivity() {
         decorView.systemUiVisibility =
             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         window.statusBarColor = Color.TRANSPARENT
-
+        swipeRefresh = findViewById(R.id.swipeRefresh)
         Log.d("WeatherActivity", "0.0")
         setContentView(R.layout.activity_weather)
 //        weatherL = ActivityWeatherBinding.inflate(layoutInflater)
@@ -72,7 +73,16 @@ class WeatherActivity : AppCompatActivity() {
                 Toast.makeText(this, "无法成功获取天气信息", Toast.LENGTH_SHORT).show()
                 result.exceptionOrNull()?.printStackTrace()
             }
+            // to hide progress bar
+            swipeRefresh?.isRefreshing = false
         })
+        // to set color for progress bar
+        swipeRefresh?.setColorSchemeResources(R.color.purple_500)
+        refreshWeather()
+        swipeRefresh?.setOnRefreshListener {
+            refreshWeather()
+        }
+
         viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
         currentTemp = findViewById(R.id.currentTemp)
         currentSky = findViewById(R.id.currentSky)
@@ -85,6 +95,24 @@ class WeatherActivity : AppCompatActivity() {
         ultravioletText = findViewById(R.id.ultravioletText)
         carWashingText = findViewById(R.id.carWashingText)
         weatherLayout = findViewById(R.id.weatherLayout)
+        navBtn = findViewById(R.id.navBtn)
+        drawerLayout = findViewById(R.id.drawerLayout)
+
+        navBtn?.setOnClickListener {
+            drawerLayout?.openDrawer(GravityCompat.START)
+        }
+        drawerLayout?.addDrawerListener(object : DrawerLayout.DrawerListener {
+            override fun onDrawerStateChanged(newState: Int) {}
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {}
+            override fun onDrawerOpened(drawerView: View) {}
+            override fun onDrawerClosed(drawerView: View) {
+                val manager = getSystemService(Context.INPUT_METHOD_SERVICE)
+                        as InputMethodManager
+                manager.hideSoftInputFromWindow(drawerView.windowToken,
+                    InputMethodManager.HIDE_NOT_ALWAYS)
+            }
+        })
+
     }
 
     @RequiresApi(Build.VERSION_CODES.N)
@@ -129,5 +157,11 @@ class WeatherActivity : AppCompatActivity() {
         carWashingText?.text = lifeIndex.carWashing[0].desc
         weatherLayout?.visibility = View.VISIBLE
     }
+
+    fun refreshWeather() {
+        viewModel.refreshWeather(viewModel.locationLng, viewModel.locationLat)
+        swipeRefresh?.isRefreshing = true
+    }
+
 
 }
